@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">{manifest.name}</string>
+    <string name="launchpath">{manifest.launch_path}</string>
+    <string name="activity_name">{manifest.activity_name}</string>
+    <string name="activity_launch">{manifest.activity_name}.MainActivity</string>
+
+</resources>

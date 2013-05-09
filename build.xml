@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="WebApp" default="help">
+
+    <property file="local.properties" />
+    <property file="ant.properties" />
+    <property environment="env" />
+    <condition property="sdk.dir" value="${env.ANDROID_HOME}">
+        <isset property="env.ANDROID_HOME" />
+    </condition>
+
+    <loadproperties srcFile="project.properties" />
+    <fail message="sdk.dir is missing. Make sure to generate local.properties using 'android update project' or to inject it through the ANDROID_HOME environment variable."
+          unless="sdk.dir"/>
+
+    <import file="custom_rules.xml" optional="true" />
+    <import file="${sdk.dir}/tools/ant/build.xml" />
+
+    <target name="parseManifest">
+        <script language="javascript">
+importClass(java.io.File);
+importClass(java.io.FileReader);
+importClass(java.io.BufferedReader);
+importClass(java.io.FileWriter);
+importClass(java.io.BufferedWriter);
+importClass(java.io.InputStream);
+importClass(java.io.BufferedInputStream);
+importClass(java.io.FileOutputStream);
+importClass(java.net.URL);
+importClass(java.net.URLConnection);
+
+function get(src, dest) {
+    project.getProperty("manifest");
+
+    getTask = project.createTask("get");
+    var url = new URL(src);
+
+    project.setProperty("json.host", url.getHost());
+    project.setProperty("origin", url.getProtocol() + "://" + url.getHost());
+
+    getTask.setSrc(url);
+    getTask.setDest(new File(dest));
+    getTask.execute();
+    return url;
+}
+
+function echo(msg) {
+    var e = project.createTask("echo");
+    e.setMessage(msg);
+    e.perform();
+}
+
+var url = get(project.getProperty("manifest"), "webapp.manifest");
+
+var file = new File("webapp.manifest");
+fr = new FileReader(file);
+br = new BufferedReader(fr);
+
+// Read the file.
+var line = "";
+var json = "";
+while ((line = br.readLine()) != null) {
+    json += line;
+}
+
+// Evaluate the JSON.
+var struct = JSON.parse(json);
+
+var parse = function(s, obj) {
+    // Set each property in the project environment.
+    for (i in s) {
+                        echo(obj + i + "=" + s[i]);
+        if (s[i] instanceof Object) {
+            parse(s[i], obj + i + ".");
+        } else {
+            project.setProperty(obj + i, s[i]);
+        }
+    }
+}
+parse(struct, "json.");
+
+project.setProperty("json.host", "org.mozilla.webapp." + url.getHost());
+project.setProperty("json.codepath", "org/mozilla/webapp/" + url.getHost().replace(".", "/"));
+project.setProperty("origin", url.getProtocol() + "://" + url.getHost());
+
+// make sure a launch path exists so that its filled in when doing the replace
+if (!struct.launch_path) {
+        project.setProperty("json.launch_path", "");
+}
+
+var icons = [];
+for (var i in struct.icons) {
+    icons.push(struct.icons[i]);
+}
+project.setProperty("json.iconList", icons.join(","));
+        </script>
+    </target>
+
+    <target name="replaceProperties" description="Replace properties in res with ones from the webapp manifest">
+        <delete file="res/values/strings.xml"/>
+        <copy file="preprocessed/strings.xml.in" tofile="res/values/strings.xml"/>
+        <replace file="res/values/strings.xml" token="{manifest.name}" value="${json.name}"/>
+        <replace file="res/values/strings.xml" token="{manifest.launch_path}" value="${origin}${json.launch_path}"/>
+        <replace file="res/values/strings.xml" token="{manifest.activity_name}" value="${json.host}"/>
+
+        <delete dir="src"/>
+        <copy file="preprocessed/MainActivity.java.in" tofile="src/${json.codepath}/MainActivity.java"/>
+        <replace file="src/${json.codepath}/MainActivity.java" token="{manifest.activity_name}" value="${json.host}"/>
+
+        <delete file="AndroidManifest.xml"/>
+        <copy file="preprocessed/AndroidManifest.xml.in" tofile="AndroidManifest.xml"/>
+        <replace file="AndroidManifest.xml" token="{manifest.activity_name}" value="${json.host}"/>
+    </target>
+
+    <target name="getImages">
+    <script language="javascript">
+<![CDATA[
+importClass(java.util.Hashtable);
+importClass(java.net.URL);
+importClass(java.io.File);
+
+var props = project.getProperties();
+var keys = props.keys();
+var origin = props.get("origin");
+
+while (keys.hasNext()) {
+    key = keys.next();
+    if (key.startsWith("json.icons.")) {
+        var size = parseInt(key.replace("json.icons.", ""));
+        echo = project.createTask("echo");
+        echo.setMessage(size + ": " + props.get(key));
+        echo.perform();
+
+        var path = props.get(key);
+
+        getTask = project.createTask("get");
+        var url = new URL(origin + path);
+        getTask.setSrc(url);
+
+        var dest = "res/drawable-";
+        if (size < 16) dest += "ldpi";
+        else if (size < 32) dest += "mdpi/";
+        else if (size < 64) dest += "hdpi/";
+        else dest += "xhdpi/";
+
+        getTask.setDest(new File(dest + "ic_launcher.png"));
+        getTask.execute();
+    }
+}
+]]>
+    </script>
+    </target>
+
+    <target name="buildRelease" depends="parseManifest,replaceProperties,getImages,release"/>
+    <target name="buildDebug" depends="parseManifest,replaceProperties,getImages,debug"/>
+
+</project>
