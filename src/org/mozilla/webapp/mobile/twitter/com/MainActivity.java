@@ -1,4 +1,4 @@
-package {manifest.activity_name};
+package org.mozilla.webapp.mobile.twitter.com;
 
 import java.util.List;
 
@@ -66,8 +66,8 @@ public class MainActivity extends Activity {
             if (activities.size() > 0) {
                 return i;
             }
-        } catch(Exception ex) { }
-
+        } catch(Exception ex) {
+        }
         return null;
     }
 

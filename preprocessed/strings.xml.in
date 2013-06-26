@@ -5,5 +5,7 @@
     <string name="launchpath">{manifest.launch_path}</string>
     <string name="activity_name">{manifest.activity_name}</string>
     <string name="activity_launch">{manifest.activity_name}.MainActivity</string>
+    <string name="get_firefox_title">Get Firefox</string>
+    <string name="get_firefox_message">This app requires that you install Firefox on your device. Do you want to go get it now?</string>
 
 </resources>

@@ -1,0 +1,3 @@
+# view AndroidManifest.xml #generated:17
+-keep class org.mozilla.webapp.mobile.twitter.com.@string/activity_launch { <init>(...); }
+
